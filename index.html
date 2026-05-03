@@ -458,8 +458,41 @@
     let player = null, ready = false;
     let fullLoop = true, abActive = false;
     let ptA = null, ptB = null, loopCount = 0;
-    let notes = [], savedLoops = [];
     let ticker = null;
+
+    // ── LOCALSTORAGE PERSISTENCE ──
+    const LS_KEY = 'loopnote_data';
+
+    function saveToStorage() {
+      try {
+        const url = document.getElementById('urlInput').value.trim();
+     sessionStorage.setItem(LS_KEY, JSON.stringify({ notes, savedLoops, url }));
+      } catch (e) {}
+    }
+
+    function loadFromStorage() {
+      try {
+     const raw = sessionStorage.getItem(LS_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.notes) notes = data.notes;
+        if (data.savedLoops) savedLoops = data.savedLoops;
+        if (data.url) {
+          document.getElementById('urlInput').value = data.url;
+          const mob = document.getElementById('urlInputMobile');
+          if (mob) mob.value = data.url;
+        }
+      } catch (e) {}
+    }
+
+    // Load saved data immediately
+    let notes = [], savedLoops = [];
+    loadFromStorage();
+    // Render after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      renderNotes();
+      renderSavedLoops();
+    });
 
     // ── UTILS ──
     function fmtTime(s) {
@@ -493,6 +526,7 @@
       const vid = getVideoId(url);
       if (!vid) { alert('Invalid YouTube URL.'); return; }
       document.getElementById('urlInput').value = 'https://www.youtube.com/watch?v=' + vid;
+      saveToStorage();
       document.getElementById('placeholder').style.display = 'none';
       document.getElementById('playerEl').style.display = 'block';
       if (player && ready) { player.loadVideoById(vid); return; }
@@ -701,6 +735,7 @@
       savedLoops.push({ id: Date.now(), name, a, b });
       document.getElementById('loopNameIn').value = '';
       renderSavedLoops();
+      saveToStorage();
     }
 
     function renderSavedLoops() {
@@ -734,6 +769,7 @@
     function deleteSavedLoop(id) {
       savedLoops = savedLoops.filter(x => x.id !== id);
       renderSavedLoops();
+      saveToStorage();
     }
 
     // ── NOTES ──
@@ -744,6 +780,7 @@
       notes.push({ id: Date.now(), ts, tsStr: fmtTime(ts), text: txt });
       document.getElementById('noteInput').value = '';
       renderNotes();
+      saveToStorage();
     }
 
     function renderNotes() {
@@ -775,6 +812,7 @@
     function deleteNote(id) {
       notes = notes.filter(n => n.id !== id);
       renderNotes();
+      saveToStorage();
     }
 
     function jumpTo(ts) {
@@ -836,6 +874,7 @@
 
         renderNotes();
         document.getElementById('importFileIn').value = '';
+        saveToStorage();
 
         // Show toast
         if (importedCount === 0) {
