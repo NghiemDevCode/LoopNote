@@ -1,14 +1,17 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LoopNote — YouTube Loop Player</title>
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style type="text/tailwindcss">
-  @theme {
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LoopNote — YouTube Loop Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style type="text/tailwindcss">
+    @theme {
     --font-sans: 'Inter', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
   }
@@ -122,438 +125,591 @@
   #fsContainer.is-fullscreen #mainGrid {
     display: contents;
   }
+  /* ── BASE: prevent horizontal scroll everywhere ── */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { overflow-x: hidden; max-width: 100%; }
+
+  /* ── MOBILE (dưới 1024px) ── */
+  @media (max-width: 1023px) {
+    /* Grid -> single column block */
+    #mainGrid {
+      display: block !important;
+      padding: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    #leftCol { width: 100% !important; }
+
+    /* Video full-width, sticky dưới header */
+    #videoWrap {
+      position: sticky !important;
+      top: 88px !important;
+      z-index: 40 !important;
+      width: 100% !important;
+      border-radius: 0 !important;
+      aspect-ratio: 16/9 !important;
+    }
+
+    /* Controls full-width, no side border-radius */
+    #controlsPanel {
+      width: 100% !important;
+      border-radius: 0 !important;
+      border-left: none !important;
+      border-right: none !important;
+      padding: 12px !important;
+      gap: 12px !important;
+    }
+
+    /* A-B grid collapse to 2 cols on small */
+    #controlsPanel .grid.grid-cols-\[1fr_1fr_auto\] {
+      grid-template-columns: 1fr 1fr !important;
+    }
+    /* Time Loop button full width below */
+    #controlsPanel .grid.grid-cols-\[1fr_1fr_auto\] > div:last-child {
+      grid-column: 1 / -1 !important;
+    }
+    #abBtn { width: 100% !important; justify-content: center !important; }
+
+    /* Sidebar full-width below controls */
+    #sidebar {
+      width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+      padding: 8px 12px 16px !important;
+    }
+    #sidebar > div {
+      height: auto !important;
+      overflow: visible !important;
+    }
+    #notesList {
+      max-height: 200px !important;
+      overflow-y: auto !important;
+    }
+  }
+
+  /* ── MOBILE LANDSCAPE: side by side ── */
+  @media (max-width: 1023px) and (orientation: landscape) {
+    #mainGrid {
+      display: grid !important;
+      grid-template-columns: 1fr 220px !important;
+      gap: 8px !important;
+      padding: 8px !important;
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+    #leftCol {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      min-width: 0 !important;
+    }
+    #videoWrap {
+      position: static !important;
+      z-index: 0 !important;
+      border-radius: 8px !important;
+      width: 100% !important;
+      max-height: calc(100vh - 130px) !important;
+    }
+    #controlsPanel {
+      border-radius: 8px !important;
+      border: 1px solid #e5e7eb !important;
+    }
+    #sidebar {
+      width: 220px !important;
+      min-width: 0 !important;
+      padding: 0 !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
+    #sidebar > div {
+      height: calc(100vh - 72px) !important;
+      max-height: none !important;
+    }
+  }
+
+  @media (max-width: 1023px) and (orientation: landscape) {
+    .ls-hide { display: none !important; }
+    .ls-show { display: flex !important; }
+  }
 </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col text-gray-900">
 
-<!-- ── HEADER ── -->
-<header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
-  <div class="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-center gap-4">
-    <div class="flex items-center gap-2 shrink-0">
-      <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">∞</div>
-      <span class="font-semibold text-gray-900 text-base">Loop<span class="text-blue-600">Note</span></span>
-    </div>
-    <div class="flex gap-2 w-full max-w-xl">
-      <input id="urlInput" type="text"
-        class="flex-1 h-9 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition placeholder-gray-400"
-        placeholder="YouTube URL" />
-      <button onclick="loadVideo()"
-        class="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition shrink-0 flex items-center gap-1">
-        ▶ Load
-      </button>
-    </div>
-  </div>
-</header>
+<body class="bg-gray-100 min-h-screen flex flex-col text-gray-900" style="overflow-x:hidden;max-width:100vw;">
 
-<!-- ── MAIN ── -->
-<div id="fsContainer">
-<div id="mainGrid" class="flex-1 max-w-screen-xl w-full mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
-
-  <!-- LEFT -->
-  <div id="leftCol" class="flex flex-col gap-3">
-
-    <!-- Video -->
-    <div id="videoWrap" class="bg-black rounded-xl overflow-hidden aspect-video shadow-md relative group">
-      <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-500">
-        <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center text-2xl">▶</div>
-        <p class="text-sm text-gray-400">Paste a YouTube URL above to start</p>
+  <!-- ── HEADER ── -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <!-- Desktop: single row -->
+    <div class="hidden md:flex w-full px-6 h-14 items-center justify-center gap-4">
+      <div class="flex items-center gap-2 shrink-0">
+        <div class="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm font-bold">∞</div>
+        <span class="font-semibold text-gray-900 text-base">Loop<span class="text-blue-600">Note</span></span>
       </div>
-      <div id="playerEl" style="display:none;width:100%;height:100%"></div>
-      <!-- Fullscreen button inside video, bottom-right -->
-      <button id="fsBtn" onclick="toggleFullscreen()" title="Fullscreen"
-        class="absolute bottom-3 right-3 w-9 h-9 flex items-center justify-center rounded-lg text-white text-base transition opacity-0 group-hover:opacity-100 z-10"
-        style="background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);">
-        ⛶
-      </button>
+      <div class="flex gap-2 flex-1 max-w-xl">
+        <input id="urlInput" type="text"
+          class="flex-1 min-w-0 h-9 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition placeholder-gray-400"
+          placeholder="YouTube URL" />
+        <button onclick="loadVideo()"
+          class="h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition shrink-0 flex items-center gap-1">
+          ▶ Load
+        </button>
+      </div>
     </div>
-
-    <!-- Controls -->
-    <div id="controlsPanel" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col gap-4">
-
-      <!-- Progress bar -->
-      <div class="flex flex-col gap-1.5">
-        <div id="progressTrack"
-          class="progress-track h-1.5 bg-gray-200 rounded-full relative cursor-pointer transition-all"
-          onclick="onSeek(event)">
-          <div id="progressLoop"
-            class="absolute top-0 h-full bg-blue-200 rounded-full pointer-events-none hidden"></div>
-          <div id="progressFill"
-            class="h-full bg-blue-600 rounded-full pointer-events-none transition-[width] duration-300"
-            style="width:0%"></div>
-          <div id="progressThumb"
-            class="progress-thumb absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow pointer-events-none"
-            style="left:0%"></div>
-        </div>
-        <div class="flex justify-between font-mono text-[11px] text-gray-500">
-          <span id="timeCur">0:00</span>
-          <span id="timeDur">0:00</span>
-        </div>
+    <!-- Mobile: 2 rows -->
+    <div class="flex md:hidden flex-col px-3 py-6 gap-2">    
+        <div class="flex items-center py-3 gap-2">
+          <div class="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center text-white text-xs font-bold">∞</div>
+          <span class="font-semibold text-gray-900 text-sm">Loop<span class="text-blue-600">Note</span></span>
+        </div>   
+      <div class="flex gap-2">
+        <input id="urlInputMobile" type="text" oninput="document.getElementById('urlInput').value=this.value" onkeydown="if(event.key==='Enter')loadVideo()"
+          class="flex-1 min-w-0 h-9 px-3 border border-gray-200 rounded-lg text-sm bg-gray-50 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 focus:bg-white transition placeholder-gray-400"
+          placeholder="YouTube URL" />
+        <button onclick="document.getElementById('urlInput').value=document.getElementById('urlInputMobile').value;loadVideo()"
+          class="h-9 px-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition shrink-0 flex items-center gap-1">
+          ▶ Load
+        </button>
       </div>
+    </div>
+  </header>
 
-      <!-- Playback buttons -->
-      <div class="flex items-center gap-2 flex-wrap">
-        <button onclick="skip(-5)"
-          class="w-9 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 text-sm transition">⟨⟨</button>
-        <button id="playBtn" onclick="togglePlay()"
-          class="h-9 px-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 transition">▶ Play</button>
-        <button onclick="skip(5)"
-          class="w-9 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 text-sm transition">⟩⟩</button>
-        <button id="loopBtn" onclick="toggleFullLoop()"
-          class="h-9 px-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 transition">↺ Loop</button>
-        <div class="flex-1"></div>
-        <select id="speedSel" onchange="setSpeed(this.value)"
-          class="h-9 px-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 cursor-pointer outline-none">
-          <option value="0.5">0.5×</option>
-          <option value="0.75">0.75×</option>
-          <option value="1" selected>1×</option>
-          <option value="1.25">1.25×</option>
-          <option value="1.5">1.5×</option>
-          <option value="2">2×</option>
-        </select>
-      </div>
+  <!-- ── MAIN ── -->
+  <div id="fsContainer">
+    <div id="mainGrid"
+      class="flex-1 max-w-screen-xl w-full mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4 items-start">
 
-      <!-- A–B Loop -->
-      <div>
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Start – End Segment Loop</div>
-          <!-- AB Toggle -->
-          <button id="abBtn" onclick="toggleAB()"
-            class="flex items-center gap-1.5 h-7 px-3 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-full text-xs font-medium text-gray-600 transition select-none">
-            <span id="abDot" class="w-2 h-2 rounded-full bg-gray-400 transition-colors"></span>
-            <span id="abLabel">Time Loop</span>
+      <!-- LEFT -->
+      <div id="leftCol" class="flex flex-col gap-3">
+
+        <!-- Video -->
+        <div id="videoWrap" class="bg-black rounded-xl overflow-hidden aspect-video shadow-md relative group">
+          <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-500">
+            <div class="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center text-2xl">▶</div>
+            <p class="text-sm text-gray-400">Paste a YouTube URL above to start</p>
+          </div>
+          <div id="playerEl" style="display:none;width:100%;height:100%"></div>
+          <!-- Fullscreen button inside video, bottom-right -->
+          <button id="fsBtn" onclick="toggleFullscreen()" title="Fullscreen"
+            class="absolute bottom-3 right-3 w-9 h-9 flex items-center justify-center rounded-lg text-white text-base transition opacity-0 group-hover:opacity-100 z-10"
+            style="background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);">
+            ⛶
           </button>
         </div>
-        <!-- Error message -->
-        <div id="abError" class="hidden mb-2 text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-          ⚠ Thời gian A phải nhỏ hơn B
-        </div>
-        <div class="grid grid-cols-2 gap-2">
-          <!-- Start A -->
-          <div class="flex flex-col gap-1">
-            <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Start</div>
-            <div class="relative flex items-center">
-              <input id="startIn" type="text" placeholder="0:00" oninput="onLoopInputChange()"
-                class="h-9 pl-3 pr-9 border border-gray-200 rounded-lg font-mono text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full" />
-              <button onclick="setPoint('A')" title="Set A = current time"
-                class="absolute right-1.5 w-6 h-6 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition shrink-0">A</button>
+
+        <!-- Controls -->
+        <div id="controlsPanel" class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm flex flex-col gap-4">
+
+          <!-- Progress bar -->
+          <div class="flex flex-col gap-1.5">
+            <div id="progressTrack"
+              class="progress-track h-1.5 bg-gray-200 rounded-full relative cursor-pointer transition-all"
+              onclick="onSeek(event)">
+              <div id="progressLoop" class="absolute top-0 h-full bg-blue-200 rounded-full pointer-events-none hidden">
+              </div>
+              <div id="progressFill"
+                class="h-full bg-blue-600 rounded-full pointer-events-none transition-[width] duration-300"
+                style="width:0%"></div>
+              <div id="progressThumb"
+                class="progress-thumb absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full shadow pointer-events-none"
+                style="left:0%"></div>
+            </div>
+            <div class="flex justify-between font-mono text-[11px] text-gray-500">
+              <span id="timeCur">0:00</span>
+              <span id="timeDur">0:00</span>
             </div>
           </div>
-          <!-- End B -->
-          <div class="flex flex-col gap-1">
-            <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">End</div>
-            <div class="relative flex items-center">
-              <input id="endIn" type="text" placeholder="0:30" oninput="onLoopInputChange()"
-                class="h-9 pl-3 pr-9 border border-gray-200 rounded-lg font-mono text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full" />
-              <button onclick="setPoint('B')" title="Set B = current time"
-                class="absolute right-1.5 w-6 h-6 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition shrink-0">B</button>
-            </div>
-          </div>
-        </div>
-      </div>
 
-    </div>
-  </div>
-
-  <!-- RIGHT: Sidebar -->
-  <div id="sidebar" class="flex flex-col gap-3">
-
-    <!-- Take Notes -->
-    <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col" style="height:100%;overflow:hidden;">
-      <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-        <div class="text-sm font-semibold text-gray-800">Take Notes</div>
-        <div class="flex gap-1.5">
-          <button onclick="importNotes()"
-            class="h-7 px-2.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition">↑ Import</button>
-          <button id="dlBtn" onclick="downloadNotes()" style="display:none"
-            class="h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition">↓ Download</button>
-        </div>
-      </div>
-      <input type="file" id="importFileIn" accept=".txt" style="display:none" onchange="handleImport(event)" />
-      <!-- Inner flex container fills remaining height -->
-      <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:16px;gap:12px;overflow:hidden;">
-        <!-- Input area — fixed, never scrolls -->
-        <div class="flex flex-col gap-2 flex-shrink-0">
-          <textarea id="noteInput" rows="3"
-            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-800 bg-gray-50 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition resize-none placeholder-gray-400 leading-relaxed"
-            placeholder="Type your note... "></textarea>
-          <div class="flex items-center gap-2">
-            <span id="curTimeBadge" class="font-mono text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-0.5">@ 0:00</span>
+          <!-- Playback buttons -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="skip(-5)"
+              class="w-9 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 text-sm transition">⟨⟨</button>
+            <button id="playBtn" onclick="togglePlay()"
+              class="h-9 px-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 transition">▶
+              Play</button>
+            <button onclick="skip(5)"
+              class="w-9 h-9 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg flex items-center justify-center text-gray-600 text-sm transition">⟩⟩</button>
+            <button id="loopBtn" onclick="toggleFullLoop()"
+              class="hidden h-9 px-4 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 transition">↺
+              Loop</button>
             <div class="flex-1"></div>
-            <span class="text-[10px] text-gray-400">Ctrl+Enter</span>
-            <button onclick="addNote()"
-              class="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition">+ Add</button>
+            <select id="speedSel" onchange="setSpeed(this.value)"
+              class="h-9 px-2 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 cursor-pointer outline-none">
+              <option value="0.5">0.5×</option>
+              <option value="0.75">0.75×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.25">1.25×</option>
+              <option value="1.5">1.5×</option>
+              <option value="2">2×</option>
+            </select>
           </div>
-        </div>
-        <!-- Divider -->
-        <div class="border-t border-gray-100 flex-shrink-0"></div>
-        <!-- Notes list — scrolls when overflowing -->
-        <div id="notesList" style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;">
-          <div class="text-center py-4 text-xs text-gray-400 leading-relaxed">
-            Notes will appear here.
+
+          <!-- A–B Loop -->
+          <div>
+            <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Start – End Segment Loop
+            </div>
+            <!-- Error message -->
+            <div id="abError"
+              class="hidden mb-2 text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+              ⚠ Thời gian A phải nhỏ hơn B
+            </div>
+            <div class="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+              <!-- Start A -->
+              <div class="flex flex-col gap-1">
+                <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Start</div>
+                <div class="relative flex items-center">
+                  <input id="startIn" type="text" placeholder="0:00" oninput="onLoopInputChange()"
+                    class="h-9 pl-3 pr-9 border border-gray-200 rounded-lg font-mono text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full" />
+                  <button onclick="setPoint('A')" title="Set A = current time"
+                    class="absolute right-1.5 w-6 h-6 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition shrink-0">A</button>
+                </div>
+              </div>
+              <!-- End B -->
+              <div class="flex flex-col gap-1">
+                <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wide">End</div>
+                <div class="relative flex items-center">
+                  <input id="endIn" type="text" placeholder="0:30" oninput="onLoopInputChange()"
+                    class="h-9 pl-3 pr-9 border border-gray-200 rounded-lg font-mono text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition w-full" />
+                  <button onclick="setPoint('B')" title="Set B = current time"
+                    class="absolute right-1.5 w-6 h-6 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold transition shrink-0">B</button>
+                </div>
+              </div>
+              <!-- Time Loop button — cùng hàng với 2 input -->
+              <div class="flex flex-col gap-1">
+                <div class="text-[11px] font-medium text-gray-400 uppercase tracking-wide opacity-0">·</div>
+                <button id="abBtn" onclick="toggleAB()"
+                  class="flex items-center gap-1.5 h-9 px-3 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 transition select-none whitespace-nowrap">
+                  <span id="abDot" class="w-2 h-2 rounded-full bg-gray-400 transition-colors"></span>
+                  <span id="abLabel">Time Loop</span>
+                </button>
+              </div>
+            </div>
           </div>
+
         </div>
       </div>
-    </div>
 
-  </div>
-</div><!-- /mainGrid -->
-</div><!-- /fsContainer -->
+      <!-- RIGHT: Sidebar -->
+      <div id="sidebar" class="flex flex-col gap-3">
 
-<script>
-// ── STATE ──
-let player = null, ready = false;
-let fullLoop = false, abActive = false;
-let ptA = null, ptB = null, loopCount = 0;
-let notes = [], savedLoops = [];
-let ticker = null;
+        <!-- Take Notes -->
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col"
+          style="height:100%;overflow:hidden;">
+          <div class="px-3 py-2 border-b border-gray-100 flex-shrink-0">
+            <!-- Row 1: title + buttons (portrait/desktop) -->
+            <div class="flex items-center justify-between">
+              <div class="text-sm font-semibold text-gray-800">Take Notes</div>
+              <div class="flex gap-1.5 ls-hide">
+                <button onclick="importNotes()"
+                  class="h-7 px-2.5 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition">↑ Import</button>
+                <button id="dlBtn" onclick="downloadNotes()" style="display:none"
+                  class="h-7 px-2.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition">↓ Download</button>
+              </div>
+            </div>
+            <!-- Row 2: buttons only on landscape -->
+            <div class="ls-show hidden gap-1.5 mt-1.5">
+              <button onclick="importNotes()"
+                class="flex-1 h-7 border border-gray-200 rounded-lg text-xs text-gray-600 hover:bg-gray-100 transition">↑ Import</button>
+              <button id="dlBtn2" onclick="downloadNotes()" style="display:none"
+                class="flex-1 h-7 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition">↓ Download</button>
+            </div>
+          </div>
+          <input type="file" id="importFileIn" accept=".txt" style="display:none" onchange="handleImport(event)" />
+          <!-- Inner flex container fills remaining height -->
+          <div style="flex:1;min-height:0;display:flex;flex-direction:column;padding:16px;gap:12px;overflow:hidden;">
+            <!-- Input area — fixed, never scrolls -->
+            <div class="flex flex-col gap-2 flex-shrink-0">
+              <textarea id="noteInput" rows="3"
+                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-800 bg-gray-50 outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 transition resize-none placeholder-gray-400 leading-relaxed"
+                placeholder="Type your note... "></textarea>
+             <div class="flex items-center gap-1 flex-wrap">
+                <span id="curTimeBadge" class="font-mono text-[10px] text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 shrink-0">@ 0:00</span>
+                <div class="flex-1 min-w-0"></div>              
+                <button onclick="addNote()"
+                  class="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg transition shrink-0">+ Add</button>
+              </div>
+            </div>
+            <!-- Divider -->
+            <div class="border-t border-gray-100 flex-shrink-0"></div>
+            <!-- Notes list — scrolls when overflowing -->
+            <div id="notesList"
+              style="flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:2px;">
+              <div class="text-center py-4 text-xs text-gray-400 leading-relaxed">
+                Notes will appear here.
+              </div>
+            </div>
+          </div>
+        </div>
 
-// ── UTILS ──
-function fmtTime(s) {
-  s = Math.max(0, s);
-  const m = Math.floor(s / 60), sec = Math.floor(s % 60);
-  return m + ':' + (sec < 10 ? '0' : '') + sec;
-}
+      </div>
+    </div><!-- /mainGrid -->
+  </div><!-- /fsContainer -->
 
-function parseTime(str) {
-  str = (str || '').trim();
-  if (!str) return null;
-  const parts = str.split(':');
-  if (parts.length === 2) {
-    const m = parseFloat(parts[0]), s = parseFloat(parts[1]);
-    if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
-  }
-  const n = parseFloat(str);
-  return isNaN(n) ? null : n;
-}
+  <!-- ── FOOTER ── -->
+  <footer class="bg-white border-t border-gray-200 py-3 text-center text-xs text-gray-400">
+    © 2026
+    <a href="https://github.com/NghiemDevCode" target="_blank"
+      class="text-blue-500 hover:text-blue-700 hover:underline transition">
+      https://github.com/NghiemDevCode
+    </a>.
+    All rights reserved.
+  </footer>
 
-function getVideoId(url) {
-  url = url.trim();
-  if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
-  const m = url.match(/(?:[?&]v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/);
-  return m ? m[1] : null;
-}
+  <script>
+    // ── STATE ──
+    let player = null, ready = false;
+    let fullLoop = true, abActive = false;
+    let ptA = null, ptB = null, loopCount = 0;
+    let notes = [], savedLoops = [];
+    let ticker = null;
 
-// ── LOAD VIDEO ──
-function loadVideo() {
-  const url = document.getElementById('urlInput').value.trim();
-  const vid = getVideoId(url);
-  if (!vid) { alert('Invalid YouTube URL.'); return; }
-  document.getElementById('urlInput').value = 'https://www.youtube.com/watch?v=' + vid;
-  document.getElementById('placeholder').style.display = 'none';
-  document.getElementById('playerEl').style.display = 'block';
-  if (player && ready) { player.loadVideoById(vid); return; }
-  if (!window.YT) {
-    const s = document.createElement('script');
-    s.src = 'https://www.youtube.com/iframe_api';
-    document.head.appendChild(s);
-    window.onYouTubeIframeAPIReady = () => createPlayer(vid);
-  } else {
-    createPlayer(vid);
-  }
-}
+    // ── UTILS ──
+    function fmtTime(s) {
+      s = Math.max(0, s);
+      const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+      return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
 
-function createPlayer(vid) {
-  player = new YT.Player('playerEl', {
-    videoId: vid,
-    playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3 },
-    events: {
-      onReady() {
-        ready = true;
-        startTicker();
-        // Default: Loop ON, startIn = 0:00
-        document.getElementById('startIn').value = '0:00';
-        ptA = 0;
-        if (!fullLoop) toggleFullLoop();
-      },
-      onStateChange(e) {
-        const playing = e.data === YT.PlayerState.PLAYING;
-        document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
-        if (playing && !ticker) startTicker();
-        // Full loop: restart khi video kết thúc
-        if (e.data === YT.PlayerState.ENDED) {
-          if (fullLoop && !abActive) {
-            player.seekTo(0, true);
-            player.playVideo();
-          }
-        }
-      },
-      onError(e) {
-        const msgs = { 2:'Video ID không hợp lệ.', 5:'Lỗi HTML5 player.',
-          100:'Video không tồn tại hoặc đã bị xoá.',
-          101:'Chủ video đã tắt embed.', 150:'Chủ video đã tắt embed.' };
-        const msg = msgs[e.data] || 'Lỗi YouTube: ' + e.data;
-        const ph = document.getElementById('placeholder');
-        document.getElementById('playerEl').style.display = 'none';
-        ph.style.display = 'flex';
-        ph.innerHTML = `<div style="width:56px;height:56px;background:rgba(220,38,38,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#dc2626">✕</div>
+    function parseTime(str) {
+      str = (str || '').trim();
+      if (!str) return null;
+      const parts = str.split(':');
+      if (parts.length === 2) {
+        const m = parseFloat(parts[0]), s = parseFloat(parts[1]);
+        if (!isNaN(m) && !isNaN(s)) return m * 60 + s;
+      }
+      const n = parseFloat(str);
+      return isNaN(n) ? null : n;
+    }
+
+    function getVideoId(url) {
+      url = url.trim();
+      if (/^[a-zA-Z0-9_-]{11}$/.test(url)) return url;
+      const m = url.match(/(?:[?&]v=|youtu\.be\/|embed\/|shorts\/)([a-zA-Z0-9_-]{11})/);
+      return m ? m[1] : null;
+    }
+
+    // ── LOAD VIDEO ──
+    function loadVideo() {
+      const url = document.getElementById('urlInput').value.trim();
+      const vid = getVideoId(url);
+      if (!vid) { alert('Invalid YouTube URL.'); return; }
+      document.getElementById('urlInput').value = 'https://www.youtube.com/watch?v=' + vid;
+      document.getElementById('placeholder').style.display = 'none';
+      document.getElementById('playerEl').style.display = 'block';
+      if (player && ready) { player.loadVideoById(vid); return; }
+      if (!window.YT) {
+        const s = document.createElement('script');
+        s.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(s);
+        window.onYouTubeIframeAPIReady = () => createPlayer(vid);
+      } else {
+        createPlayer(vid);
+      }
+    }
+
+    function createPlayer(vid) {
+      player = new YT.Player('playerEl', {
+        videoId: vid,
+        playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, iv_load_policy: 3 },
+        events: {
+          onReady() {
+            ready = true;
+            startTicker();
+            // Default: Loop ON, startIn = 0:00
+            document.getElementById('startIn').value = '0:00';
+            ptA = 0;
+            if (!fullLoop) toggleFullLoop();
+          },
+          onStateChange(e) {
+            const playing = e.data === YT.PlayerState.PLAYING;
+            document.getElementById('playBtn').textContent = playing ? '⏸ Pause' : '▶ Play';
+            if (playing && !ticker) startTicker();
+            // Full loop: restart khi video kết thúc
+            if (e.data === YT.PlayerState.ENDED) {
+              if (fullLoop && !abActive) {
+                player.seekTo(0, true);
+                player.playVideo();
+              }
+            }
+          },
+          onError(e) {
+            const msgs = {
+              2: 'Video ID không hợp lệ.', 5: 'Lỗi HTML5 player.',
+              100: 'Video không tồn tại hoặc đã bị xoá.',
+              101: 'Chủ video đã tắt embed.', 150: 'Chủ video đã tắt embed.'
+            };
+            const msg = msgs[e.data] || 'Lỗi YouTube: ' + e.data;
+            const ph = document.getElementById('placeholder');
+            document.getElementById('playerEl').style.display = 'none';
+            ph.style.display = 'flex';
+            ph.innerHTML = `<div style="width:56px;height:56px;background:rgba(220,38,38,.12);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;color:#dc2626">✕</div>
           <p style="color:#dc2626;font-weight:600;font-size:14px;margin-top:8px">${msg}</p>
           <p style="font-size:12px;color:#9ca3af;max-width:300px;text-align:center;line-height:1.6;margin-top:4px">
             Xoá <b>&list=...</b> khỏi URL, dùng link video đơn giản.<br>
             Ví dụ: <code style="background:#f3f4f6;padding:1px 5px;border-radius:4px">https://youtu.be/VIDEO_ID</code>
           </p>`;
+          }
+        }
+      });
+    }
+
+    // ── TICKER ──
+    function startTicker() {
+      if (ticker) clearInterval(ticker);
+      ticker = setInterval(() => {
+        if (!player || !ready) return;
+        try {
+          const cur = player.getCurrentTime() || 0;
+          const dur = player.getDuration() || 1;
+          const pct = (cur / dur) * 100;
+          document.getElementById('progressFill').style.width = pct + '%';
+          document.getElementById('progressThumb').style.left = pct + '%';
+          document.getElementById('timeCur').textContent = fmtTime(cur);
+          document.getElementById('timeDur').textContent = fmtTime(dur);
+          document.getElementById('curTimeBadge').textContent = '@ ' + fmtTime(cur);
+          if (abActive && ptA !== null && ptB !== null) {
+            const lr = document.getElementById('progressLoop');
+            lr.classList.remove('hidden');
+            lr.style.left = (ptA / dur * 100) + '%';
+            lr.style.width = ((ptB - ptA) / dur * 100) + '%';
+            if (cur >= ptB - 0.15) {
+              loopCount++;
+              player.seekTo(ptA, true);
+            }
+          }
+          if (fullLoop && !abActive && dur > 0 && dur - cur < 0.5) {
+            player.seekTo(0, true); player.playVideo();
+          }
+        } catch (e) { }
+      }, 300);
+    }
+
+    // ── CONTROLS ──
+    function togglePlay() {
+      if (!player || !ready) return;
+      player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
+    }
+
+    function skip(s) {
+      if (!player || !ready) return;
+      player.seekTo(player.getCurrentTime() + s, true);
+    }
+
+    function setSpeed(v) {
+      if (player && ready) player.setPlaybackRate(parseFloat(v));
+    }
+
+    function toggleFullLoop() {
+      fullLoop = !fullLoop;
+      const btn = document.getElementById('loopBtn');
+      btn.textContent = fullLoop ? '↺ On' : '↺ Loop';
+      if (fullLoop) {
+        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+        btn.classList.remove('bg-gray-100', 'text-gray-700', 'border-gray-200');
+      } else {
+        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+        btn.classList.add('bg-gray-100', 'text-gray-700', 'border-gray-200');
       }
     }
-  });
-}
 
-// ── TICKER ──
-function startTicker() {
-  if (ticker) clearInterval(ticker);
-  ticker = setInterval(() => {
-    if (!player || !ready) return;
-    try {
-      const cur = player.getCurrentTime() || 0;
-      const dur = player.getDuration() || 1;
-      const pct = (cur / dur) * 100;
-      document.getElementById('progressFill').style.width = pct + '%';
-      document.getElementById('progressThumb').style.left = pct + '%';
-      document.getElementById('timeCur').textContent = fmtTime(cur);
-      document.getElementById('timeDur').textContent = fmtTime(dur);
-      document.getElementById('curTimeBadge').textContent = '@ ' + fmtTime(cur);
-      if (abActive && ptA !== null && ptB !== null) {
-        const lr = document.getElementById('progressLoop');
-        lr.classList.remove('hidden');
-        lr.style.left = (ptA / dur * 100) + '%';
-        lr.style.width = ((ptB - ptA) / dur * 100) + '%';
-        if (cur >= ptB - 0.15) {
-          loopCount++;
-          player.seekTo(ptA, true);
-        }
+    function onSeek(e) {
+      if (!player || !ready) return;
+      const rect = document.getElementById('progressTrack').getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      player.seekTo(pct * player.getDuration(), true);
+    }
+
+    // ── A–B ──
+    function setPoint(pt) {
+      if (!player || !ready) { alert('Load a video first'); return; }
+      const cur = player.getCurrentTime();
+      const id = pt === 'A' ? 'startIn' : 'endIn';
+      if (pt === 'A') ptA = cur; else ptB = cur;
+      const el = document.getElementById(id);
+      el.value = fmtTime(cur);
+      el.classList.add('border-blue-500', 'bg-blue-50');
+      setTimeout(() => el.classList.remove('border-blue-500', 'bg-blue-50'), 600);
+      // Validate A < B after setting
+      const errEl = document.getElementById('abError');
+      if (ptA !== null && ptB !== null && ptA >= ptB) {
+        errEl.classList.remove('hidden');
+        setTimeout(() => errEl.classList.add('hidden'), 3000);
+      } else {
+        errEl.classList.add('hidden');
       }
-      if (fullLoop && !abActive && dur > 0 && dur - cur < 0.5) {
-        player.seekTo(0, true); player.playVideo();
+    }
+
+    function onLoopInputChange() {
+      const aStr = document.getElementById('startIn').value.trim();
+      const bStr = document.getElementById('endIn').value.trim();
+      const a = parseTime(aStr);
+      const b = parseTime(bStr);
+      // Allow 0 as valid value for A
+      if (a !== null || aStr === '0' || aStr === '0:00') ptA = (a !== null ? a : 0);
+      if (b !== null) ptB = b;
+      const errEl = document.getElementById('abError');
+      if (ptA !== null && ptB !== null && ptA >= ptB) {
+        errEl.classList.remove('hidden');
+      } else {
+        errEl.classList.add('hidden');
       }
-    } catch(e) {}
-  }, 300);
-}
+    }
 
-// ── CONTROLS ──
-function togglePlay() {
-  if (!player || !ready) return;
-  player.getPlayerState() === YT.PlayerState.PLAYING ? player.pauseVideo() : player.playVideo();
-}
+    function toggleAB() {
+      const aStr = document.getElementById('startIn').value.trim();
+      const bStr = document.getElementById('endIn').value.trim();
+      const a = parseTime(aStr);
+      const b = parseTime(bStr);
+      // 0 / 0:00 is a valid start
+      if (a !== null) ptA = a; else if (aStr === '' && ptA === null) ptA = 0;
+      if (b !== null) ptB = b;
+      const errEl = document.getElementById('abError');
+      const ptAValid = ptA !== null;
+      if (!abActive && (!ptAValid || ptB === null || ptA >= ptB)) {
+        errEl.classList.remove('hidden');
+        setTimeout(() => errEl.classList.add('hidden'), 3000);
+        return;
+      }
+      errEl.classList.add('hidden');
+      abActive = !abActive;
+      loopCount = 0;
+      const btn = document.getElementById('abBtn');
+      const dot = document.getElementById('abDot');
+      const lbl = document.getElementById('abLabel');
+      if (abActive) {
+        btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+        btn.classList.remove('bg-gray-100', 'text-gray-600', 'border-gray-200', 'hover:bg-gray-200');
+        dot.classList.add('bg-white', 'dot-active');
+        dot.classList.remove('bg-gray-400');
+        lbl.textContent = 'AB On';
+        if (player && ready) player.seekTo(ptA, true);
+      } else {
+        btn.classList.remove('bg-blue-600', 'text-white', 'border-blue-600');
+        btn.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-200', 'hover:bg-gray-200');
+        dot.classList.remove('bg-white', 'dot-active');
+        dot.classList.add('bg-gray-400');
+        lbl.textContent = 'AB Loop';
+        document.getElementById('progressLoop').classList.add('hidden');
+      }
+    }
 
-function skip(s) {
-  if (!player || !ready) return;
-  player.seekTo(player.getCurrentTime() + s, true);
-}
+    // ── SAVED LOOPS ──
+    function saveCurrentLoop() {
+      const a = parseTime(document.getElementById('startIn').value);
+      const b = parseTime(document.getElementById('endIn').value);
+      if (a === null || b === null || a >= b) { alert('Set valid A–B points first.'); return; }
+      const name = document.getElementById('loopNameIn').value.trim() || ('Loop ' + (savedLoops.length + 1));
+      savedLoops.push({ id: Date.now(), name, a, b });
+      document.getElementById('loopNameIn').value = '';
+      renderSavedLoops();
+    }
 
-function setSpeed(v) {
-  if (player && ready) player.setPlaybackRate(parseFloat(v));
-}
-
-function toggleFullLoop() {
-  fullLoop = !fullLoop;
-  const btn = document.getElementById('loopBtn');
-  btn.textContent = fullLoop ? '↺ On' : '↺ Loop';
-  if (fullLoop) {
-    btn.classList.add('bg-blue-600','text-white','border-blue-600');
-    btn.classList.remove('bg-gray-100','text-gray-700','border-gray-200');
-  } else {
-    btn.classList.remove('bg-blue-600','text-white','border-blue-600');
-    btn.classList.add('bg-gray-100','text-gray-700','border-gray-200');
-  }
-}
-
-function onSeek(e) {
-  if (!player || !ready) return;
-  const rect = document.getElementById('progressTrack').getBoundingClientRect();
-  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-  player.seekTo(pct * player.getDuration(), true);
-}
-
-// ── A–B ──
-function setPoint(pt) {
-  if (!player || !ready) { alert('Load a video first'); return; }
-  const cur = player.getCurrentTime();
-  const id = pt === 'A' ? 'startIn' : 'endIn';
-  if (pt === 'A') ptA = cur; else ptB = cur;
-  const el = document.getElementById(id);
-  el.value = fmtTime(cur);
-  el.classList.add('border-blue-500','bg-blue-50');
-  setTimeout(() => el.classList.remove('border-blue-500','bg-blue-50'), 600);
-  // Validate A < B after setting
-  const errEl = document.getElementById('abError');
-  if (ptA !== null && ptB !== null && ptA >= ptB) {
-    errEl.classList.remove('hidden');
-    setTimeout(() => errEl.classList.add('hidden'), 3000);
-  } else {
-    errEl.classList.add('hidden');
-  }
-}
-
-function onLoopInputChange() {
-  const aStr = document.getElementById('startIn').value.trim();
-  const bStr = document.getElementById('endIn').value.trim();
-  const a = parseTime(aStr);
-  const b = parseTime(bStr);
-  // Allow 0 as valid value for A
-  if (a !== null || aStr === '0' || aStr === '0:00') ptA = (a !== null ? a : 0);
-  if (b !== null) ptB = b;
-  const errEl = document.getElementById('abError');
-  if (ptA !== null && ptB !== null && ptA >= ptB) {
-    errEl.classList.remove('hidden');
-  } else {
-    errEl.classList.add('hidden');
-  }
-}
-
-function toggleAB() {
-  const aStr = document.getElementById('startIn').value.trim();
-  const bStr = document.getElementById('endIn').value.trim();
-  const a = parseTime(aStr);
-  const b = parseTime(bStr);
-  // 0 / 0:00 is a valid start
-  if (a !== null) ptA = a; else if (aStr === '' && ptA === null) ptA = 0;
-  if (b !== null) ptB = b;
-  const errEl = document.getElementById('abError');
-  const ptAValid = ptA !== null;
-  if (!abActive && (!ptAValid || ptB === null || ptA >= ptB)) {
-    errEl.classList.remove('hidden');
-    setTimeout(() => errEl.classList.add('hidden'), 3000);
-    return;
-  }
-  errEl.classList.add('hidden');
-  abActive = !abActive;
-  loopCount = 0;
-  const btn = document.getElementById('abBtn');
-  const dot = document.getElementById('abDot');
-  const lbl = document.getElementById('abLabel');
-  if (abActive) {
-    btn.classList.add('bg-blue-600','text-white','border-blue-600');
-    btn.classList.remove('bg-gray-100','text-gray-600','border-gray-200','hover:bg-gray-200');
-    dot.classList.add('bg-white','dot-active');
-    dot.classList.remove('bg-gray-400');
-    lbl.textContent = 'AB On';
-    if (player && ready) player.seekTo(ptA, true);
-  } else {
-    btn.classList.remove('bg-blue-600','text-white','border-blue-600');
-    btn.classList.add('bg-gray-100','text-gray-600','border-gray-200','hover:bg-gray-200');
-    dot.classList.remove('bg-white','dot-active');
-    dot.classList.add('bg-gray-400');
-    lbl.textContent = 'AB Loop';
-    document.getElementById('progressLoop').classList.add('hidden');
-  }
-}
-
-// ── SAVED LOOPS ──
-function saveCurrentLoop() {
-  const a = parseTime(document.getElementById('startIn').value);
-  const b = parseTime(document.getElementById('endIn').value);
-  if (a === null || b === null || a >= b) { alert('Set valid A–B points first.'); return; }
-  const name = document.getElementById('loopNameIn').value.trim() || ('Loop ' + (savedLoops.length + 1));
-  savedLoops.push({ id: Date.now(), name, a, b });
-  document.getElementById('loopNameIn').value = '';
-  renderSavedLoops();
-}
-
-function renderSavedLoops() {
-  const el = document.getElementById('savedLoopsList');
-  if (!savedLoops.length) {
-    el.innerHTML = '<div class="text-center py-4 text-xs text-gray-400 leading-relaxed">No saved loops yet.<br>Set A–B and click Save.</div>';
-    return;
-  }
-  el.innerHTML = savedLoops.map(l => `
+    function renderSavedLoops() {
+      const el = document.getElementById('savedLoopsList');
+      if (!savedLoops.length) {
+        el.innerHTML = '<div class="text-center py-4 text-xs text-gray-400 leading-relaxed">No saved loops yet.<br>Set A–B and click Save.</div>';
+        return;
+      }
+      el.innerHTML = savedLoops.map(l => `
     <div onclick="loadSavedLoop(${l.id})"
       class="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg mb-1.5 cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition last:mb-0">
       <div class="flex-1 min-w-0">
@@ -563,46 +719,48 @@ function renderSavedLoops() {
       <button onclick="event.stopPropagation();deleteSavedLoop(${l.id})"
         class="w-5 h-5 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded text-xs transition">✕</button>
     </div>`).join('');
-}
+    }
 
-function loadSavedLoop(id) {
-  const l = savedLoops.find(x => x.id === id);
-  if (!l) return;
-  ptA = l.a; ptB = l.b;
-  document.getElementById('startIn').value = fmtTime(l.a);
-  document.getElementById('endIn').value = fmtTime(l.b);
-  abActive = false;
-  toggleAB();
-}
+    function loadSavedLoop(id) {
+      const l = savedLoops.find(x => x.id === id);
+      if (!l) return;
+      ptA = l.a; ptB = l.b;
+      document.getElementById('startIn').value = fmtTime(l.a);
+      document.getElementById('endIn').value = fmtTime(l.b);
+      abActive = false;
+      toggleAB();
+    }
 
-function deleteSavedLoop(id) {
-  savedLoops = savedLoops.filter(x => x.id !== id);
-  renderSavedLoops();
-}
+    function deleteSavedLoop(id) {
+      savedLoops = savedLoops.filter(x => x.id !== id);
+      renderSavedLoops();
+    }
 
-// ── NOTES ──
-function addNote() {
-  const txt = document.getElementById('noteInput').value.trim();
-  if (!txt) return;
-  const ts = (player && ready) ? player.getCurrentTime() : 0;
-  notes.push({ id: Date.now(), ts, tsStr: fmtTime(ts), text: txt });
-  document.getElementById('noteInput').value = '';
-  renderNotes();
-}
+    // ── NOTES ──
+    function addNote() {
+      const txt = document.getElementById('noteInput').value.trim();
+      if (!txt) return;
+      const ts = (player && ready) ? player.getCurrentTime() : 0;
+      notes.push({ id: Date.now(), ts, tsStr: fmtTime(ts), text: txt });
+      document.getElementById('noteInput').value = '';
+      renderNotes();
+    }
 
-function renderNotes() {
-  const el = document.getElementById('notesList');
-  const dlBtn = document.getElementById('dlBtn');
-  if (!notes.length) {
-    el.innerHTML = '<div class="text-center py-4 text-xs text-gray-400 leading-relaxed">Notes will appear here.<br>Type <b class="text-gray-500">00:20</b> in a note to jump there.</div>';
-    dlBtn.style.display = 'none';
-    return;
-  }
-  dlBtn.style.display = '';
-  el.innerHTML = notes.map(n => {
-    const linked = n.text.replace(/\b(\d{1,2}:\d{2})\b/g, (match) =>
-      `<button class="note-ts-btn" onclick="jumpTo(${parseTime(match)})">${match}</button>`);
-    return `<div class="note-item px-3 py-2 border border-gray-200 rounded-lg text-xs">
+    function renderNotes() {
+      const el = document.getElementById('notesList');
+      const dlBtn = document.getElementById('dlBtn');
+      if (!notes.length) {
+        el.innerHTML = '<div class="text-center py-4 text-xs text-gray-400 leading-relaxed">Notes will appear here.<br>Type <b class="text-gray-500">00:20</b> in a note to jump there.</div>';
+        dlBtn.style.display = 'none';
+        const d2=document.getElementById('dlBtn2');if(d2)d2.style.display='none';
+        return;
+      }
+      dlBtn.style.display = '';
+      const d2=document.getElementById('dlBtn2');if(d2)d2.style.display='';
+      el.innerHTML = notes.map(n => {
+        const linked = n.text.replace(/\b(\d{1,2}:\d{2})\b/g, (match) =>
+          `<button class="note-ts-btn" onclick="jumpTo(${parseTime(match)})">${match}</button>`);
+        return `<div class="note-item px-3 py-2 border border-gray-200 rounded-lg text-xs">
       <div class="flex items-center gap-2 mb-1">
         <button class="note-ts-btn" onclick="jumpTo(${n.ts})">${n.tsStr}</button>
         <button onclick="deleteNote(${n.id})"
@@ -610,157 +768,163 @@ function renderNotes() {
       </div>
       <div class="text-gray-600 leading-relaxed">${linked}</div>
     </div>`;
-  }).join('');
-  el.scrollTop = el.scrollHeight;
-}
-
-function deleteNote(id) {
-  notes = notes.filter(n => n.id !== id);
-  renderNotes();
-}
-
-function jumpTo(ts) {
-  if (!player || !ready) return;
-  player.seekTo(ts, true);
-  player.playVideo();
-}
-
-// ── DOWNLOAD / IMPORT ──
-function downloadNotes() {
-  if (!notes.length) return;
-  const url = document.getElementById('urlInput').value.trim();
-  const lines = [
-    'VIDEO: ' + url,
-    'Exported: ' + new Date().toLocaleString(),
-    '',
-    '── NOTES ──',
-    ''
-  ];
-  notes.forEach(n => lines.push('[' + n.tsStr + '] ' + n.text));
-  if (savedLoops.length) {
-    lines.push('', '── SAVED LOOPS ──', '');
-    savedLoops.forEach(l => lines.push(l.name + ': ' + fmtTime(l.a) + ' → ' + fmtTime(l.b)));
-  }
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'loopnote-notes.txt';
-  a.click();
-}
-
-function importNotes() {
-  document.getElementById('importFileIn').click();
-}
-
-function handleImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const lines = ev.target.result.split('\n');
-    const videoLine = lines.find(l => l.startsWith('VIDEO: '));
-    const hasVideo = !!videoLine;
-
-    if (hasVideo) {
-      const url = videoLine.replace('VIDEO: ', '').trim();
-      document.getElementById('urlInput').value = url;
+      }).join('');
+      el.scrollTop = el.scrollHeight;
     }
 
-    let importedCount = 0;
-    lines.forEach(line => {
-      const m = line.match(/^\[(\d+:\d+)\] (.+)$/);
-      if (m) {
-        const ts = parseTime(m[1]);
-        notes.push({ id: Date.now() + Math.random(), ts, tsStr: m[1], text: m[2] });
-        importedCount++;
+    function deleteNote(id) {
+      notes = notes.filter(n => n.id !== id);
+      renderNotes();
+    }
+
+    function jumpTo(ts) {
+      if (!player || !ready) return;
+      player.seekTo(ts, true);
+      player.playVideo();
+    }
+
+    // ── DOWNLOAD / IMPORT ──
+    function downloadNotes() {
+      if (!notes.length) return;
+      const url = document.getElementById('urlInput').value.trim();
+      const lines = [
+        'VIDEO: ' + url,
+        'Exported: ' + new Date().toLocaleString(),
+        '',
+        '── NOTES ──',
+        ''
+      ];
+      notes.forEach(n => lines.push('[' + n.tsStr + '] ' + n.text));
+      if (savedLoops.length) {
+        lines.push('', '── SAVED LOOPS ──', '');
+        savedLoops.forEach(l => lines.push(l.name + ': ' + fmtTime(l.a) + ' → ' + fmtTime(l.b)));
       }
-    });
-
-    renderNotes();
-    document.getElementById('importFileIn').value = '';
-
-    // Show toast
-    if (importedCount === 0) {
-      showToast('Không tìm thấy note nào trong file.', 'warn');
-      return;
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'loopnote-notes.txt';
+      a.click();
     }
-    if (hasVideo) {
-      showToast(`Đã import ${importedCount} note · Nhấn Load để phát video`, 'info');
-    } else {
-      showToast(`Đã import ${importedCount} note · Không có link video trong file`, 'warn');
+
+    function importNotes() {
+      document.getElementById('importFileIn').click();
     }
-  };
-  reader.readAsText(file);
-}
 
-function showToast(msg, type) {
-  const existing = document.getElementById('toastMsg');
-  if (existing) existing.remove();
-  const colors = {
-    info: 'bg-blue-600 text-white',
-    warn: 'bg-amber-500 text-white',
-    ok:   'bg-green-600 text-white',
-  };
-  const t = document.createElement('div');
-  t.id = 'toastMsg';
-  t.className = `fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg transition-all ${colors[type] || colors.info}`;
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3500);
-}
+    function handleImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        const lines = ev.target.result.split('\n');
+        const videoLine = lines.find(l => l.startsWith('VIDEO: '));
+        const hasVideo = !!videoLine;
 
-// ── FULLSCREEN ──
-function toggleFullscreen() {
-  const fs = document.getElementById('fsContainer');
-  const btn = document.getElementById('fsBtn');
-  const isFs = fs.classList.contains('is-fullscreen');
-  if (!isFs) {
-    fs.classList.add('is-fullscreen');
-    btn.textContent = '⊠';
-    btn.title = 'Thoát fullscreen (ESC)';
-    document.body.style.overflow = 'hidden';
-  } else {
-    fs.classList.remove('is-fullscreen');
-    btn.textContent = '⛶';
-    btn.title = 'Fullscreen';
-    document.body.style.overflow = '';
+        if (hasVideo) {
+          const url = videoLine.replace('VIDEO: ', '').trim();
+          document.getElementById('urlInput').value = url;
+        }
+
+        let importedCount = 0;
+        lines.forEach(line => {
+          const m = line.match(/^\[(\d+:\d+)\] (.+)$/);
+          if (m) {
+            const ts = parseTime(m[1]);
+            notes.push({ id: Date.now() + Math.random(), ts, tsStr: m[1], text: m[2] });
+            importedCount++;
+          }
+        });
+
+        renderNotes();
+        document.getElementById('importFileIn').value = '';
+
+        // Show toast
+        if (importedCount === 0) {
+          showToast('Không tìm thấy note nào trong file.', 'warn');
+          return;
+        }
+        if (hasVideo) {
+          showToast(`Đã import ${importedCount} note · Nhấn Load để phát video`, 'info');
+        } else {
+          showToast(`Đã import ${importedCount} note · Không có link video trong file`, 'warn');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function showToast(msg, type) {
+      const existing = document.getElementById('toastMsg');
+      if (existing) existing.remove();
+      const colors = {
+        info: 'bg-blue-600 text-white',
+        warn: 'bg-amber-500 text-white',
+        ok: 'bg-green-600 text-white',
+      };
+      const t = document.createElement('div');
+      t.id = 'toastMsg';
+      t.className = `fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg transition-all ${colors[type] || colors.info}`;
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3500);
+    }
+
+    // ── FULLSCREEN ──
+    function toggleFullscreen() {
+      const fs = document.getElementById('fsContainer');
+      const btn = document.getElementById('fsBtn');
+      const isFs = fs.classList.contains('is-fullscreen');
+      if (!isFs) {
+        fs.classList.add('is-fullscreen');
+        btn.textContent = '⛶';
+        btn.title = 'Thoát fullscreen (ESC)';
+        document.body.style.overflow = 'hidden';
+      } else {
+        fs.classList.remove('is-fullscreen');
+        btn.textContent = '⛶';
+        btn.title = 'Fullscreen';
+        document.body.style.overflow = '';
+        setTimeout(syncSidebarHeight, 100);
+      }
+    }
+
+    // ── SYNC SIDEBAR HEIGHT TO LEFT COLUMN ──
+    function syncSidebarHeight() {
+      const fs = document.getElementById('fsContainer');
+      if (fs && fs.classList.contains('is-fullscreen')) return; // CSS handles fullscreen
+      const left = document.getElementById('leftCol');
+      const sidebar = document.getElementById('sidebar');
+      if (!left || !sidebar) return;
+      const h = left.getBoundingClientRect().height;
+      sidebar.style.height = h + 'px';
+      sidebar.style.overflow = 'hidden';
+    }
+    window.addEventListener('resize', syncSidebarHeight);
     setTimeout(syncSidebarHeight, 100);
-  }
-}
-
-// ── SYNC SIDEBAR HEIGHT TO LEFT COLUMN ──
-function syncSidebarHeight() {
-  const fs = document.getElementById('fsContainer');
-  if (fs && fs.classList.contains('is-fullscreen')) return; // CSS handles fullscreen
-  const left = document.getElementById('leftCol');
-  const sidebar = document.getElementById('sidebar');
-  if (!left || !sidebar) return;
-  const h = left.getBoundingClientRect().height;
-  sidebar.style.height = h + 'px';
-  sidebar.style.overflow = 'hidden';
-}
-window.addEventListener('resize', syncSidebarHeight);
-setTimeout(syncSidebarHeight, 100);
-setTimeout(syncSidebarHeight, 500);
-setTimeout(syncSidebarHeight, 1500);
-setInterval(syncSidebarHeight, 2000);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    const fs = document.getElementById('fsContainer');
-    if (fs.classList.contains('is-fullscreen')) toggleFullscreen();
-    return;
-  }
-  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-  if (e.code === 'ArrowLeft') skip(-5);
-  if (e.code === 'ArrowRight') skip(5);
-});
-document.getElementById('noteInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && e.ctrlKey) addNote();
-});
-document.getElementById('urlInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') loadVideo();
-});
-</script>
+    setTimeout(syncSidebarHeight, 500);
+    setTimeout(syncSidebarHeight, 1500);
+    setInterval(syncSidebarHeight, 2000);
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        const fs = document.getElementById('fsContainer');
+        if (fs.classList.contains('is-fullscreen')) toggleFullscreen();
+        return;
+      }
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return;
+      if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+      if (e.code === 'ArrowLeft') skip(-5);
+      if (e.code === 'ArrowRight') skip(5);
+    });
+    document.getElementById('noteInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.ctrlKey) addNote();
+    });
+    document.getElementById('urlInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') loadVideo();
+    });
+    // Sync desktop input -> mobile input
+    document.getElementById('urlInput').addEventListener('input', e => {
+      const mob = document.getElementById('urlInputMobile');
+      if (mob) mob.value = e.target.value;
+    });
+  </script>
 </body>
+
 </html>
