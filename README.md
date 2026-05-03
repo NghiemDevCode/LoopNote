@@ -2,6 +2,6 @@
 
 © 2026 https://github.com/NghiemDevCode. All rights reserved.
 
-Mã nguồn này là tài sản riêng của tác giả. Mọi hành vi sao chép, phân phối hoặc sử dụng vào mục đích thương mại/cá nhân mà không có sự đồng ý bằng văn bản của tác giả đều bị nghiêm cấm.
+This source code is the author's private property. Any copying, distribution, or commercial/personal use without the author's written consent is strictly prohibited.
 
-Để xin phép sử dụng, vui lòng liên hệ: nghiem.devcode@gmail.com
+To request permission, please contact: nghiem.devcode@gmail.com
